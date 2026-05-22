@@ -1088,7 +1088,7 @@ function AiRewriteBlock({ el, updateEl, aiModel, aiConsids }) {
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("anthropic_api_key")||"", "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true" },
         body: JSON.stringify({
           model,
           max_tokens: 400,
@@ -2706,7 +2706,7 @@ function ImageGeneratorPanel({ slide, activeIdx, onInsertImage, aiModel }) {
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("anthropic_api_key")||"", "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true" },
         body: JSON.stringify({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 200,
@@ -3380,7 +3380,7 @@ function SlideEditor({ carousel, headlines = [], onBack, onRegenerate, aiModel, 
       }
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST", headers:{"Content-Type":"application/json"},
+        method:"POST", headers:{"Content-Type":"application/json","x-api-key":localStorage.getItem("anthropic_api_key")||"","anthropic-version":"2023-06-01","anthropic-dangerous-allow-browser":"true"},
         body: JSON.stringify({
           model:"claude-sonnet-4-20250514", max_tokens:1000,
           system:`You rewrite financial carousel slide body text to fit a specific social media format. Be ${tone}. Max ${charLimit} chars per body. Keep all financial data points. Return ONLY raw JSON array: [{"slideLabel":"...","id":"e-body","content":"rewritten text"}]`,
@@ -5132,7 +5132,7 @@ function ContentPlanPanel({ headlines, selected, setSelected, contentPlans, setC
     try {
       const activeConsids = (promptConsids||[]).filter(p=>p.enabled).map(p=>p.text).join(". ");
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST", headers:{"Content-Type":"application/json"},
+        method:"POST", headers:{"Content-Type":"application/json","x-api-key":localStorage.getItem("anthropic_api_key")||"","anthropic-version":"2023-06-01","anthropic-dangerous-allow-browser":"true"},
         body: JSON.stringify({
           model: selectedModel || "claude-sonnet-4-20250514",
           max_tokens: 600,
@@ -5639,7 +5639,7 @@ function AnalystBriefPanel({ headlines, selected, briefs, setBriefs, selectedMod
     try {
       const activeConsids = (promptConsids||[]).filter(p=>p.enabled).map(p=>p.text).join(". ");
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST", headers:{"Content-Type":"application/json"},
+        method:"POST", headers:{"Content-Type":"application/json","x-api-key":localStorage.getItem("anthropic_api_key")||"","anthropic-version":"2023-06-01","anthropic-dangerous-allow-browser":"true"},
         body: JSON.stringify({
           model: selectedModel || "claude-sonnet-4-20250514",
           max_tokens: 400,
@@ -5899,6 +5899,7 @@ function VantageAutomation() {
   const [selectedModel,  setSelectedModel]  = useState(AI_MODELS[0].id);
   const [promptConsids,  setPromptConsids]  = useState(DEFAULT_PROMPT_CONSIDERATIONS);
   const [showAISettings, setShowAISettings] = useState(false);
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("anthropic_api_key") || "");
   const [newPromptText,  setNewPromptText]  = useState("");
   const [previewHl,   setPreviewHl]   = useState(null);
   const [calEvents,   setCalEvents]   = useState([]);          // fetched calendar events
@@ -5958,7 +5959,7 @@ function VantageAutomation() {
     for (let turn = 0; turn < maxTurns; turn++) {
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("anthropic_api_key")||"", "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true" },
         body: JSON.stringify({ ...body, messages }),
       });
       lastData = await resp.json();
@@ -6402,7 +6403,7 @@ Only include facts found in actual search results. If you cannot verify a number
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("anthropic_api_key")||"", "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true" },
         body: JSON.stringify({
           model:      selectedModel,
           max_tokens: 1200,
@@ -6569,7 +6570,7 @@ Only include facts found in actual search results. If you cannot verify a number
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("anthropic_api_key")||"", "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true" },
         body: JSON.stringify({
           model:      selectedModel,
           max_tokens: 1500,
@@ -7844,6 +7845,20 @@ Focus on: central bank decisions, CPI/inflation, GDP, employment/payrolls, PMI, 
           {subTab === "ai" && (
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
 
+              {/* API Key */}
+              <div style={{ gridColumn:"1/-1", background:"rgba(255,255,255,0.03)", border:`1px solid ${B.border}`, borderRadius:14, padding:"20px 22px" }}>
+                <div style={{ fontSize:11, fontWeight:700, color:B.orange, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:4 }}>Anthropic API Key</div>
+                <div style={{ fontSize:12, color:B.muted, marginBottom:14, lineHeight:1.6 }}>Required to use AI features. Stored locally in your browser — never sent anywhere except Anthropic.</div>
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={e => { setApiKey(e.target.value); localStorage.setItem("anthropic_api_key", e.target.value); }}
+                  placeholder="sk-ant-..."
+                  style={{ width:"100%", background:"rgba(255,255,255,0.06)", border:`1px solid ${apiKey ? B.orange : B.border}`, borderRadius:8, padding:"9px 12px", fontSize:12, color:"white", fontFamily:"monospace", boxSizing:"border-box" }}
+                />
+                {apiKey && <div style={{ marginTop:8, fontSize:11, color:"#34d399" }}>&#10003; API key saved locally</div>}
+                {!apiKey && <div style={{ marginTop:8, fontSize:11, color:"#F87171" }}>&#9888; Enter your API key to enable AI generation</div>}
+              </div>
               {/* Model selector */}
               <div style={{ background:"rgba(255,255,255,0.03)", border:`1px solid ${B.border}`, borderRadius:14, padding:"20px 22px" }}>
                 <div style={{ fontSize:11, fontWeight:700, color:B.orange, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:4 }}>AI Model</div>
