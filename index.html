@@ -39,10 +39,10 @@ const DISCLAIMER =
   "Trading CFDs involves the risk of losing substantially more than the initial investment, and CFD investors do not own or have any rights to underlying assets. General advice only and does not constitute any investment advice. Please see our TMD, PDS and FSG on our website before trading. Vantage Global Prime Pty Ltd AFSL 428901.";
 
 const SOURCE_DEFS = [
-  { name:"Reuters",       rss:"https://feeds.reuters.com/reuters/businessNews",         hasRss:true  },
+  { name:"Reuters",       rss:"https://feeds.reuters.com/reuters/topNews",              hasRss:true  },
   { name:"FXStreet",      rss:"https://www.fxstreet.com/rss/news",                     hasRss:true  },
   { name:"DailyFX",       rss:"https://www.dailyfx.com/feeds/all",                     hasRss:true  },
-  { name:"Investing.com", rss:"https://www.investing.com/rss/news.rss",                hasRss:true  },
+  { name:"Yahoo Finance", rss:"https://finance.yahoo.com/rss/topfinstories",            hasRss:true  },
   { name:"MarketWatch",   rss:"https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines", hasRss:true },
   { name:"Bloomberg",     rss:"",  hasRss:false, url:"https://www.bloomberg.com",  site:"bloomberg.com" },
   { name:"Ausbiz",        rss:"",  hasRss:false, url:"https://www.ausbiz.com.au",  site:"ausbiz.com.au" },
@@ -6142,7 +6142,7 @@ function VantageAutomation() {
       setSourceHealth(prev => ({...prev, [srcDef.name]: health}));
       const logEntry = result.ok
         ? { name:srcDef.name, status:"ok",    count:result.items.length, detail:`${result.items.length} headlines · ${getAgeLabel(Date.now())} · via ${result.proxy.replace("https://","")}` }
-        : { name:srcDef.name, status:"error", count:0,                   detail:"All proxies failed — source may be blocked" };
+        : { name:srcDef.name, status:"error", count:0,                   detail:`Proxies failed: ${(result.errors||[]).slice(0,2).join(" | ") || "unknown error"}` };
       logUpdates.push(logEntry);
       setFetchLog(l => [...l, logEntry]);
       if (result.ok) all.push(...result.items);
