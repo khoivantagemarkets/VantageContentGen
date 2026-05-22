@@ -6061,23 +6061,51 @@ function VantageAutomation() {
     const rulesRef = priorityRules; // snapshot for closures
 
     // Race all CORS proxies simultaneously — first valid response wins
-    // 8s timeout gives cold-start proxies enough time to respond
+    // 12s timeout to allow cold-start on free proxies
     const PROXIES = [
-      url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+      url => `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=10`,
+      url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
       url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+      url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
       url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-      url => `https://thingproxy.freeboard.io/fetch/${url}`,
     ];
 
     async function tryProxy(makeProxy, rssUrl, sourceName) {
       const proxyUrl = makeProxy(rssUrl);
-      const resp = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
+      const resp = await fetch(proxyUrl, { signal: AbortSignal.timeout(12000) });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const text = await resp.text();
-      let xml = text;
-      try { const j = JSON.parse(text); if (j.contents) xml = j.contents; } catch(_){}
-      if (!xml.includes("<item") && !xml.includes("<entry")) throw new Error("No RSS items");
-      const items = parseRssXml(xml, sourceName, rulesRef);
+      let items = [];
+      try {
+        const j = JSON.parse(text);
+        if (j.status === "ok" && Array.isArray(j.items) && j.items.length > 0) {
+          const fetchedAt = Date.now();
+          items = j.items.slice(0, 8).map((item, i) => {
+            const headline = (item.title || "").trim();
+            const summary = (item.description || item.content || "")
+              .replace(/<[^>]+>/g, "").replace(/\s{2,}/g, " ").trim().slice(0, 200);
+            const link = /^https?:\/\/.{10,}/.test(item.link) ? item.link : "";
+            let eventDate = "", pubMs = 0;
+            try { const d = new Date(item.pubDate); if (!isNaN(d)) { eventDate = d.toLocaleDateString("en-AU",{day:"numeric",month:"short",weekday:"short"}); pubMs = d.getTime(); } } catch(_){}
+            const ageH = pubMs ? (fetchedAt - pubMs) / 3600000 : 48;
+            const importance = scoreImportance(headline + " " + summary, rulesRef);
+            const boostedImportance = ageH < 3 ? Math.min(10, importance + 1) : ageH > 36 ? Math.max(1, importance - 2) : importance;
+            return { id:`${sourceName}-${i}`, headline, summary, source:sourceName, category:detectCategory(headline+" "+summary), importance:boostedImportance, accentWords:extractAccentWords(headline), eventDate, link, fetchedAt, pubMs, sourceCount:1, entities:extractEntities(headline+" "+summary), direction:detectDirection(headline), topic:detectTopic(headline,extractEntities(headline))||"General" };
+          }).filter(h => h.headline.length > 10);
+          if (items.length > 0) return { ok:true, items, proxy: proxyUrl.split("?")[0] };
+          throw new Error("0 items from rss2json");
+        }
+        if (j.contents) {
+          const xml = j.contents;
+          if (!xml.includes("<item") && !xml.includes("<entry")) throw new Error("No RSS items in allorigins contents");
+          items = parseRssXml(xml, sourceName, rulesRef);
+          if (items.length === 0) throw new Error("0 items parsed");
+          return { ok:true, items, proxy: proxyUrl.split("?")[0] };
+        }
+      } catch(jsonErr) { /* not JSON — fall through to raw XML */ }
+      const xml = text;
+      if (!xml.includes("<item") && !xml.includes("<entry")) throw new Error("No RSS items in raw response");
+      items = parseRssXml(xml, sourceName, rulesRef);
       if (items.length === 0) throw new Error("0 items parsed");
       return { ok:true, items, proxy: proxyUrl.split("?")[0] };
     }
