@@ -6234,24 +6234,58 @@ CRITICAL RULES:
     }
 
     setLoading(false); setLoadMsg("");
-
     if (all.length === 0) {
-      // All proxies failed — fall back to mock data with a visible warning
-      setError("⚠ All CORS proxies failed (network or rate-limit issue). Showing sample headlines — data is not live.");
-      const mockWithMeta = MOCK_HEADLINES.map(h => ({
-        ...h,
-        entities:    h.entities   || extractEntities(h.headline),
-        direction:   h.direction  || detectDirection(h.headline),
-        topic:       h.topic      || detectTopic(h.headline, extractEntities(h.headline)),
-        fetchedAt:   Date.now(),
-        sourceCount: 1,
-        _isMock:     true,
-      }));
-      setHeadlines(mockWithMeta.sort((a,b)=>(b.importance||0)-(a.importance||0)));
-      setLastFetchAt(Date.now());
-      setLoading(false); setLoadMsg("");
-      setPhase("dashboard");
-      return;
+      // RSS proxies all failed — try AI web search as fallback
+      const _fbKey = localStorage.getItem("anthropic_api_key") || "";
+      if (_fbKey) {
+        setLoadMsg("RSS proxies blocked — switching to AI news search...");
+        try {
+          const today = new Date().toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"});
+          const { text: fbText } = await callWithAgentLoop({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 1800,
+            tools: [{ type:"web_search_20250305", name:"web_search" }],
+            system: "You are a financial news aggregator. Search for today's top financial market headlines and return a JSON array of 8-12 items from sources like Reuters, Bloomberg, CNBC, MarketWatch, FXStreet.\nReturn ONLY a raw JSON array, no markdown:\n[{\"headline\":\"exact headline\",\"source\":\"Reuters\",\"summary\":\"1-2 sentence summary\",\"category\":\"Forex|Equities|Commodities|Central Banks|Geopolitics|Economic Data\",\"importance\":7,\"accentWords\":\"2-3 key words\",\"direction\":\"up|down|hold|neutral\",\"link\":\"https://...\"}]",
+            messages: [{ role:"user", content:"Search for the latest financial market news headlines today (" + today + "). Focus on: forex, commodities (gold, oil), central banks (Fed, RBA, ECB), equities (ASX, S&P 500). Return 8-12 headlines as a JSON array." }],
+          }, 6);
+          const fbParsed = extractJsonArray(fbText);
+          if (fbParsed && fbParsed.length > 0) {
+            const fbEnriched = fbParsed.map((h, i) => ({
+              ...h,
+              id:         "ai-fallback-" + i,
+              entities:   extractEntities((h.headline||"") + " " + (h.summary||"")),
+              direction:  h.direction || detectDirection(h.headline||""),
+              topic:      detectTopic(h.headline||"", extractEntities(h.headline||"")),
+              importance: scoreImportance((h.headline||"") + (h.summary||""), priorityRules),
+              fetchedAt:  Date.now(),
+              sourceCount: 1,
+            }));
+            all.push(...fbEnriched);
+            setFetchLog(l => [...l, { name:"AI Web Search", status:"ok", count:fbEnriched.length, detail:"RSS proxies blocked — " + fbEnriched.length + " headlines via AI web search" }]);
+          }
+        } catch(fbErr) {
+          // AI fallback also failed
+        }
+      }
+
+      if (all.length === 0) {
+        const noKey = !localStorage.getItem("anthropic_api_key");
+        setError("All news sources failed. " + (noKey ? "Enter your API key in AI Settings to enable AI fallback." : "Both RSS and AI search failed — check your network.") + " Showing sample headlines.");
+        const mockWithMeta = MOCK_HEADLINES.map(h => ({
+          ...h,
+          entities:    h.entities   || extractEntities(h.headline),
+          direction:   h.direction  || detectDirection(h.headline),
+          topic:       h.topic      || detectTopic(h.headline, extractEntities(h.headline)),
+          fetchedAt:   Date.now(),
+          sourceCount: 1,
+          _isMock:     true,
+        }));
+        setHeadlines(mockWithMeta.sort((a,b)=>(b.importance||0)-(a.importance||0)));
+        setLastFetchAt(Date.now());
+        setLoading(false); setLoadMsg("");
+        setPhase("dashboard");
+        return;
+      }
     }
 
     // ── Topic-based clustering (entity-aware) ──
