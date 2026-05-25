@@ -39,15 +39,15 @@ const DISCLAIMER =
   "Trading CFDs involves the risk of losing substantially more than the initial investment, and CFD investors do not own or have any rights to underlying assets. General advice only and does not constitute any investment advice. Please see our TMD, PDS and FSG on our website before trading. Vantage Global Prime Pty Ltd AFSL 428901.";
 
 const SOURCE_DEFS = [
-  { name:"Reuters",       rss:"https://feeds.reuters.com/reuters/topNews",              hasRss:true  },
-  { name:"FXStreet",      rss:"https://www.fxstreet.com/rss/news",                     hasRss:true  },
-  { name:"DailyFX",       rss:"https://www.dailyfx.com/feeds/all",                     hasRss:true  },
-  { name:"Yahoo Finance", rss:"https://finance.yahoo.com/rss/topfinstories",            hasRss:true  },
-  { name:"MarketWatch",   rss:"https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines", hasRss:true },
-  { name:"Bloomberg",     rss:"",  hasRss:false, url:"https://www.bloomberg.com",  site:"bloomberg.com" },
-  { name:"Ausbiz",        rss:"",  hasRss:false, url:"https://www.ausbiz.com.au",  site:"ausbiz.com.au" },
-  { name:"CNBC Markets",       rss:"https://www.cnbc.com/id/20409666/device/rss/rss.html", hasRss:true, url:"https://www.cnbc.com/markets/", site:"cnbc.com" },
-  { name:"Trading Economics",  rss:"https://tradingeconomics.com/rss",  hasRss:false, url:"https://tradingeconomics.com",  site:"tradingeconomics.com" },
+  { name:"Reuters",          rss:"https://feeds.reuters.com/reuters/topNews",                         hasRss:true  },
+  { name:"FXStreet",         rss:"https://www.fxstreet.com/rss/news",                                 hasRss:true  },
+  { name:"DailyFX",          rss:"https://www.dailyfx.com/feeds/all",                                 hasRss:true  },
+  { name:"Yahoo Finance",    rss:"https://finance.yahoo.com/news/rssindex",                           hasRss:true  },
+  { name:"MarketWatch",      rss:"https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines", hasRss:true  },
+  { name:"InvestingLive",    rss:"https://investinglive.com/feed/",                                   hasRss:true  },
+  { name:"Ausbiz",           rss:"",  hasRss:false, url:"https://www.ausbiz.com.au",  site:"ausbiz.com.au" },
+  { name:"CNBC Markets",     rss:"https://www.cnbc.com/id/20409666/device/rss/rss.html",              hasRss:true, url:"https://www.cnbc.com/markets/", site:"cnbc.com" },
+  { name:"Trading Economics",rss:"https://tradingeconomics.com/rss",                                   hasRss:true, url:"https://tradingeconomics.com", site:"tradingeconomics.com" },
 ];
 const SOURCES = SOURCE_DEFS.map(s => s.name);
 
@@ -5880,6 +5880,7 @@ function VantageAutomation() {
   const [fetchLog,    setFetchLog]    = useState([]);
   const [sourceHealth,setSourceHealth]= useState({});  // name -> "working"|"blocked"|"stale"|"needs-login"
   const [lastFetchAt, setLastFetchAt] = useState(null);
+  const [headlineFilter, setHeadlineFilter] = useState("");
 
   // ── AI Model + Prompt settings ──
   const AI_MODELS = [
@@ -7029,6 +7030,9 @@ Focus on: central bank decisions, CPI/inflation, GDP, employment/payrolls, PMI, 
   }
 
   const pool = headlines.filter(h=>!selected.includes(h.id));
+  const filteredPool = headlineFilter
+    ? pool.filter(h => h.headline.toLowerCase().includes(headlineFilter.toLowerCase()) || (h.source||"").toLowerCase().includes(headlineFilter.toLowerCase()))
+    : pool;
   const selHeadlines = selected.map(id=>headlines.find(h=>h.id===id)).filter(Boolean);
   const totalSlides = carousel ? 1+carousel.slides.length : 0;
 
@@ -7772,9 +7776,9 @@ Focus on: central bank decisions, CPI/inflation, GDP, employment/payrolls, PMI, 
                 onDragOver={e=>e.preventDefault()}
                 onDrop={e=>{ e.preventDefault(); onDropOnZone("pool"); }}
               >
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
                   <div style={{ fontSize:12, fontWeight:700, color:B.muted, textTransform:"uppercase", letterSpacing:"0.06em" }}>
-                    Available Headlines ({pool.length})
+                    Available Headlines ({headlineFilter ? `${filteredPool.length}/` : ""}{pool.length})
                   </div>
                   <div style={{ display:"flex", gap:6 }}>
                     {Object.keys(CAT_COLORS).slice(0,4).map(c=>(
@@ -7782,8 +7786,30 @@ Focus on: central bank decisions, CPI/inflation, GDP, employment/payrolls, PMI, 
                     ))}
                   </div>
                 </div>
+                <div style={{ position:"relative", marginBottom:10 }}>
+                  <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", fontSize:13, color:B.muted, pointerEvents:"none" }}>🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Filter headlines or source…"
+                    value={headlineFilter}
+                    onChange={e=>setHeadlineFilter(e.target.value)}
+                    style={{
+                      width:"100%", boxSizing:"border-box",
+                      background:"rgba(255,255,255,0.05)", border:`1px solid ${headlineFilter ? B.orange : B.border}`,
+                      borderRadius:8, padding:"7px 30px 7px 32px",
+                      color:"white", fontSize:12, fontFamily:"inherit", outline:"none",
+                      transition:"border-color 0.15s",
+                    }}
+                  />
+                  {headlineFilter && (
+                    <button onClick={()=>setHeadlineFilter("")}
+                      style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:B.muted, cursor:"pointer", fontSize:14, lineHeight:1, padding:0 }}>
+                      ×
+                    </button>
+                  )}
+                </div>
                 <div style={{ ...panelStyle, padding:14, minHeight:200 }}>
-                  {pool.map(h=>(
+                  {filteredPool.map(h=>(
                     <HeadlineCard
                       key={h.id} h={h} selected={false}
                       dragging={dragId===h.id} dragOver={dragOver===h.id}
@@ -7793,6 +7819,9 @@ Focus on: central bank decisions, CPI/inflation, GDP, employment/payrolls, PMI, 
                       onDrop={onDropOnCard}
                     />
                   ))}
+                  {filteredPool.length===0 && pool.length>0 && (
+                    <div style={{ textAlign:"center", color:B.muted, padding:"40px 0", fontSize:13 }}>No headlines match "{headlineFilter}"</div>
+                  )}
                   {pool.length===0 && <div style={{ textAlign:"center", color:B.muted, padding:"40px 0", fontSize:13 }}>All headlines added to carousel</div>}
                 </div>
               </div>
