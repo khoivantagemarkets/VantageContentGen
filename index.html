@@ -46,7 +46,7 @@ const SOURCE_DEFS = [
   { name:"MarketWatch",   rss:"https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines", hasRss:true },
   { name:"Bloomberg",     rss:"",  hasRss:false, url:"https://www.bloomberg.com",  site:"bloomberg.com" },
   { name:"Ausbiz",        rss:"",  hasRss:false, url:"https://www.ausbiz.com.au",  site:"ausbiz.com.au" },
-  { name:"InvestingLive",      rss:"",  hasRss:false, url:"https://www.investing.com",  site:"investing.com" },
+  { name:"CNBC Markets",       rss:"https://www.cnbc.com/id/20409666/device/rss/rss.html", hasRss:true, url:"https://www.cnbc.com/markets/", site:"cnbc.com" },
   { name:"Trading Economics",  rss:"https://tradingeconomics.com/rss",  hasRss:false, url:"https://tradingeconomics.com",  site:"tradingeconomics.com" },
 ];
 const SOURCES = SOURCE_DEFS.map(s => s.name);
@@ -1088,7 +1088,7 @@ function AiRewriteBlock({ el, updateEl, aiModel, aiConsids }) {
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("anthropic_api_key")||"", "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true", "anthropic-beta": "web-search-2025-03-05" },
+        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("anthropic_api_key")||"", "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true" },
         body: JSON.stringify({
           model,
           max_tokens: 400,
@@ -2706,7 +2706,7 @@ function ImageGeneratorPanel({ slide, activeIdx, onInsertImage, aiModel }) {
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("anthropic_api_key")||"", "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true", "anthropic-beta": "web-search-2025-03-05" },
+        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("anthropic_api_key")||"", "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true" },
         body: JSON.stringify({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 200,
@@ -3380,7 +3380,7 @@ function SlideEditor({ carousel, headlines = [], onBack, onRegenerate, aiModel, 
       }
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST", headers:{"Content-Type":"application/json","x-api-key":localStorage.getItem("anthropic_api_key")||"","anthropic-version":"2023-06-01","anthropic-dangerous-allow-browser":"true","anthropic-beta":"web-search-2025-03-05"},
+        method:"POST", headers:{"Content-Type":"application/json","x-api-key":localStorage.getItem("anthropic_api_key")||"","anthropic-version":"2023-06-01","anthropic-dangerous-allow-browser":"true"},
         body: JSON.stringify({
           model:"claude-sonnet-4-20250514", max_tokens:1000,
           system:`You rewrite financial carousel slide body text to fit a specific social media format. Be ${tone}. Max ${charLimit} chars per body. Keep all financial data points. Return ONLY raw JSON array: [{"slideLabel":"...","id":"e-body","content":"rewritten text"}]`,
@@ -5132,7 +5132,7 @@ function ContentPlanPanel({ headlines, selected, setSelected, contentPlans, setC
     try {
       const activeConsids = (promptConsids||[]).filter(p=>p.enabled).map(p=>p.text).join(". ");
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST", headers:{"Content-Type":"application/json","x-api-key":localStorage.getItem("anthropic_api_key")||"","anthropic-version":"2023-06-01","anthropic-dangerous-allow-browser":"true","anthropic-beta":"web-search-2025-03-05"},
+        method:"POST", headers:{"Content-Type":"application/json","x-api-key":localStorage.getItem("anthropic_api_key")||"","anthropic-version":"2023-06-01","anthropic-dangerous-allow-browser":"true"},
         body: JSON.stringify({
           model: selectedModel || "claude-sonnet-4-20250514",
           max_tokens: 600,
@@ -5639,7 +5639,7 @@ function AnalystBriefPanel({ headlines, selected, briefs, setBriefs, selectedMod
     try {
       const activeConsids = (promptConsids||[]).filter(p=>p.enabled).map(p=>p.text).join(". ");
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST", headers:{"Content-Type":"application/json","x-api-key":localStorage.getItem("anthropic_api_key")||"","anthropic-version":"2023-06-01","anthropic-dangerous-allow-browser":"true","anthropic-beta":"web-search-2025-03-05"},
+        method:"POST", headers:{"Content-Type":"application/json","x-api-key":localStorage.getItem("anthropic_api_key")||"","anthropic-version":"2023-06-01","anthropic-dangerous-allow-browser":"true"},
         body: JSON.stringify({
           model: selectedModel || "claude-sonnet-4-20250514",
           max_tokens: 400,
@@ -5959,7 +5959,7 @@ function VantageAutomation() {
     for (let turn = 0; turn < maxTurns; turn++) {
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("anthropic_api_key")||"", "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true", "anthropic-beta": "web-search-2025-03-05" },
+        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("anthropic_api_key")||"", "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true" },
         body: JSON.stringify({ ...body, messages }),
       });
       lastData = await resp.json();
@@ -6480,7 +6480,7 @@ Only include facts found in actual search results. If you cannot verify a number
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method:  "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("anthropic_api_key")||"", "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true", "anthropic-beta": "web-search-2025-03-05" },
+        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("anthropic_api_key")||"", "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true" },
         body: JSON.stringify({
           model:      selectedModel,
           max_tokens: 1200,
@@ -6647,7 +6647,7 @@ Only include facts found in actual search results. If you cannot verify a number
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method:  "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("anthropic_api_key")||"", "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true", "anthropic-beta": "web-search-2025-03-05" },
+        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("anthropic_api_key")||"", "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true" },
         body: JSON.stringify({
           model:      selectedModel,
           max_tokens: 1500,
