@@ -658,11 +658,6 @@ function HeadlineCard({ h, selected, dragging, dragOver, onToggle, onDragStart, 
           <div style={{ fontSize:15, color: selected ? B.orange : "#374151", fontWeight:700 }}>
             {selected ? "✓" : "+"}
           </div>
-          <button onClick={e=>{ e.stopPropagation(); onPreview&&onPreview(h); }}
-            title="Preview full headline"
-            style={{ background:"none", border:`1px solid ${B.border}`, borderRadius:4, color:B.muted, fontSize:9, cursor:"pointer", padding:"1px 5px", fontFamily:"inherit", lineHeight:1.4 }}>
-            👁
-          </button>
         </div>
       </div></div>
   );
@@ -6391,93 +6386,17 @@ CRITICAL RULES:
         "Be concise — 2-3 sentences per body. Keep body text under 220 characters.",
         hasArticleContext
           ? "IMPORTANT: Verified article text has been provided for some stories. Use only facts from the article — do not invent statistics, quotes, or data not present in the article. If the article says 4.35%, write 4.35%."
-          : "STRICT RULE: Only use facts from the headline, RSS summary, or the WEB-SEARCHED FACTS block below. Do not write specific percentages, prices, rates, or dates that are not explicitly in those sources. If you don't have a specific number, describe the direction (e.g. 'rose sharply') rather than inventing a figure.",
+          : "STRICT RULE: Only use facts from the headline and RSS summary provided. Do not write specific percentages, prices, rates, or dates not explicitly given. If you lack a specific number, describe the direction (e.g. 'rose sharply') rather than inventing a figure.",
         planContext ? `\nEditorial plan and article content per story:\n${planContext}\n\nUse the editorial angles and article content as primary sources — do NOT simply paraphrase the headline.` : "",
         activeConsids ? `\nContent requirements:\n${activeConsids}` : "",
       ].filter(Boolean).join("\n");
-
-      // ── Enrich headlines without article context via web search ──────────
-      // For each headline that has no article text, use web search to pull
-      // current facts so the body copy is grounded in real information.
-      const needsEnrichment = selData.filter(h => !contentPlans[h.id]?.articleText);
-
-      let enrichedContext = "";
-      if (needsEnrichment.length > 0) {
-        setLoadMsg(`Web-searching ${needsEnrichment.length} headline${needsEnrichment.length!==1?"s":""} for current data…`);
-        try {
-          const searchQueries = needsEnrichment.map(h =>
-            `${h.headline} site:reuters.com OR site:bloomberg.com OR site:fxstreet.com OR site:investing.com`
-          ).join("\n");
-
-          const enrichResult = await callWithAgentLoop({
-            model:      "claude-sonnet-4-20250514",
-            max_tokens: 1800,
-            tools:      [{ type:"web_search_20250305", name:"web_search" }],
-            system: `You are a financial researcher. For each headline, search the web for verified facts.
-Return a structured JSON object — no markdown, no prose, just JSON:
-{
-  "results": [
-    {
-      "headline": "exact headline text",
-      "facts": ["specific verified fact 1", "fact 2"],
-      "sources": [{"title": "Reuters", "url": "https://..."}, ...]
-    }
-  ]
-}
-Only include facts found in actual search results. If you cannot verify a number, omit it.`,
-            messages: [{
-              role: "user",
-              content: `Search for current verified facts for each headline:\n\n${needsEnrichment.map(h => `- ${h.headline} (${h.source})`).join("\n")}\n\nReturn only the JSON object.`
-            }]
-          });
-
-          // Parse structured enrichment response
-          const enrichRaw = enrichResult.text || "";
-          let enrichedSources = {}; // headline -> [{title, url}]
-          try {
-            const parsed = JSON.parse((enrichRaw.match(/\{[\s\S]*\}/)||["{}"])[0]);
-            (parsed.results||[]).forEach(r => {
-              enrichedSources[r.headline] = r.sources||[];
-              // Build fact string for system prompt
-            });
-            // Rebuild enrichedContext from structured response
-            enrichedContext = (parsed.results||[]).map(r =>
-              `HEADLINE: ${r.headline}\nFACTS:\n${(r.facts||[]).map(f=>`- ${f}`).join("\n")}`
-            ).join("\n---\n");
-          } catch(_) {
-            enrichedContext = enrichRaw;
-            enrichedSources = {};
-          }
-          // Also capture inline citations from web search tool blocks
-          (enrichResult.citations||[]).forEach(c => {
-            // Associate with best-matching headline
-            needsEnrichment.forEach(h => {
-              const hl = h.headline.toLowerCase();
-              const keyTerms = hl.split(" ").filter(w=>w.length>4).slice(0,3);
-              if (keyTerms.some(t => (c.title||"").toLowerCase().includes(t) || (c.url||"").toLowerCase().includes(t))) {
-                if (!enrichedSources[h.headline]) enrichedSources[h.headline] = [];
-                if (!enrichedSources[h.headline].find(s=>s.url===c.url)) enrichedSources[h.headline].push(c);
-              }
-            });
-          });
-
-          // Store sources back on selData for use in slide creation
-          needsEnrichment.forEach(h => {
-            if (enrichedSources[h.headline]) h._enrichedSources = enrichedSources[h.headline];
-          });
-        } catch(e) {
-          // Web search failed — continue with headline-only generation
-          enrichedContext = "";
-        }
-      }
 
       // ── Build final user message ──────────────────────────────────────
       const userMessage = [
         `WEEK AHEAD carousel. Week: ${weekLabel}.`,
         `Headlines: ${JSON.stringify(compact)}.`,
-        enrichedContext ? `\n\nWEB-SEARCHED FACTS (from live search — cross-check important figures):\n${enrichedContext}` : "",
         `\nReturn ONLY this JSON shape: {"weekLabel":"${weekLabel}","coverAccentWords":"2-4 word theme","coverRestTitle":"rest of title","slides":[{"accentWords":"1-3 words","restOfTitle":"rest","eventDate":"DD Mon, Day or empty","body":"2-3 punchy analytical sentences with data points for retail traders — max 220 chars","source":"source name from input","link":"link from input as-is"}]}`
-      ].filter(Boolean).join("");
+      ].join("");
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method:  "POST",
