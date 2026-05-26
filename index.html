@@ -6331,9 +6331,9 @@ CRITICAL RULES:
   }
 
   /* ── API: Generate Carousel ── */
-  // Simple direct call — no web search needed, carousel only processes already-fetched headlines
   async function generateCarousel() {
     if (selected.length < 2) { setError("Select at least 2 headlines."); return; }
+    if (!localStorage.getItem("anthropic_api_key")) { setError("No API key set. Add your Anthropic key in the ⚙ Dev Tools drawer."); return; }
     setLoading(true); setError(""); setStreamText("");
     setLoadMsg("Writing carousel copy…");
     try {
@@ -6482,7 +6482,10 @@ CRITICAL RULES:
       };
       try { await saveSession(enrichedParsed); } catch(_) { /* silent */ }
     } catch(e) {
-      setError(e.message);
+      const msg = e.message || String(e);
+      setError(msg === "Failed to fetch"
+        ? "Could not reach Anthropic API. Check your API key in ⚙ Dev Tools, and that your browser/network allows requests to api.anthropic.com."
+        : msg);
     }
     setLoading(false); setLoadMsg(""); setStreamText("");
   }
@@ -6491,6 +6494,7 @@ CRITICAL RULES:
   /* ── API: Deep Dive — single-topic multi-slide carousel ── */
   async function generateDeepDive() {
     if (selected.length !== 1) { setError("Select exactly one headline for a deep dive."); return; }
+    if (!localStorage.getItem("anthropic_api_key")) { setError("No API key set. Add your Anthropic key in the ⚙ Dev Tools drawer."); return; }
     setLoading(true); setError(""); setStreamText("");
     setLoadMsg("Building deep-dive carousel…");
 
@@ -6526,24 +6530,6 @@ CRITICAL RULES:
         activeConsids ? `\nContent requirements:\n${activeConsids}` : "",
       ].filter(Boolean).join("\n");
 
-      // Web search enrichment if no article
-      let enrichedFacts = "";
-      let enrichedSources = [];
-      if (!artText) {
-        setLoadMsg("Web-searching for current data…");
-        try {
-          const enrichResult = await callWithAgentLoop({
-            model:  "claude-haiku-4-5-20251001",
-            max_tokens: 1000,
-            tools:  [{ type:"web_search_20250305", name:"web_search" }],
-            system: `Search for verified facts about this financial headline. Return specific numbers, rates, prices, dates, and official quotes. Include source URLs.`,
-            messages:[{ role:"user", content: `Find current verified data for: "${h.headline}" (${h.source})` }],
-          }, 4);
-          enrichedFacts = enrichResult.text || "";
-          enrichedSources = enrichResult.citations || [];
-        } catch(_) { /* continue without */ }
-      }
-
       setLoadMsg("Generating deep-dive slides…");
 
       const userContent = [
@@ -6553,7 +6539,6 @@ CRITICAL RULES:
         `Summary: ${h.summary || "N/A"}`,
         `Category: ${h.category} | Direction: ${h.direction||"neutral"} | Topic: ${h.topic||"General"}`,
         artText ? `\n--- ARTICLE TEXT ---\n${artText.slice(0,2000)}\n--- END ---` : "",
-        enrichedFacts ? `\n--- WEB-SEARCHED FACTS ---\n${enrichedFacts}\n--- END ---` : "",
         `\nReturn ONLY this JSON shape:`,
         `{"weekLabel":"${weekLabel}","coverAccentWords":"2-4 word topic","coverRestTitle":"Deep Dive",`,
         `"slides":[`,
@@ -6610,16 +6595,14 @@ CRITICAL RULES:
       const parsed = extractJsonObject(full);
       if (!parsed || !parsed.slides?.length) throw new Error("Failed to parse deep-dive carousel JSON.");
 
-      // Enrich slides with tier + source info
-      const tier = artText ? 1 : enrichedFacts ? 2 : 3;
       const enrichedParsed = {
         ...parsed,
         slides: (parsed.slides || []).map(sl => ({
           ...sl,
-          source:          h.source,
-          link:            h.link || "",
-          tier,
-          enrichedSources: enrichedSources.slice(0, 5),
+          source: h.source,
+          link:   h.link || "",
+          tier:   artText ? 1 : 3,
+          enrichedSources: [],
         })),
       };
 
@@ -6627,7 +6610,10 @@ CRITICAL RULES:
       setPhase("preview");
       try { await saveSession(enrichedParsed); } catch(_) {}
     } catch(e) {
-      setError(e.message);
+      const msg = e.message || String(e);
+      setError(msg === "Failed to fetch"
+        ? "Could not reach Anthropic API. Check your API key in ⚙ Dev Tools, and that your browser/network allows requests to api.anthropic.com."
+        : msg);
     }
     setLoading(false); setLoadMsg(""); setStreamText("");
   }
