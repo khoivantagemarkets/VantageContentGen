@@ -1083,7 +1083,7 @@ function AiRewriteBlock({ el, updateEl, aiModel, aiConsids }) {
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": (localStorage.getItem("anthropic_api_key")||"").trim(), "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true" },
+        headers: { "Content-Type": "application/json", "x-api-key": (localStorage.getItem("anthropic_api_key")||"").trim(), "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
         body: JSON.stringify({
           model,
           max_tokens: 400,
@@ -2701,7 +2701,7 @@ function ImageGeneratorPanel({ slide, activeIdx, onInsertImage, aiModel }) {
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": (localStorage.getItem("anthropic_api_key")||"").trim(), "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true" },
+        headers: { "Content-Type": "application/json", "x-api-key": (localStorage.getItem("anthropic_api_key")||"").trim(), "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
         body: JSON.stringify({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 200,
@@ -5959,7 +5959,7 @@ function VantageAutomation() {
     for (let turn = 0; turn < maxTurns; turn++) {
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": (localStorage.getItem("anthropic_api_key")||"").trim(), "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true" },
+        headers: { "Content-Type": "application/json", "x-api-key": (localStorage.getItem("anthropic_api_key")||"").trim(), "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
         body: JSON.stringify({ ...body, messages }),
       });
       lastData = await resp.json();
@@ -6404,7 +6404,7 @@ CRITICAL RULES:
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method:  "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": (localStorage.getItem("anthropic_api_key")||"").trim(), "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true" },
+        headers: { "Content-Type": "application/json", "x-api-key": (localStorage.getItem("anthropic_api_key")||"").trim(), "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
         body: JSON.stringify({
           model:      selectedModel,
           max_tokens: 1200,
@@ -6556,7 +6556,7 @@ CRITICAL RULES:
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method:  "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": (localStorage.getItem("anthropic_api_key")||"").trim(), "anthropic-version": "2023-06-01", "anthropic-dangerous-allow-browser": "true" },
+        headers: { "Content-Type": "application/json", "x-api-key": (localStorage.getItem("anthropic_api_key")||"").trim(), "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
         body: JSON.stringify({
           model:      selectedModel,
           max_tokens: 1500,
