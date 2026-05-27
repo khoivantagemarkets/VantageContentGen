@@ -3375,7 +3375,7 @@ function SlideEditor({ carousel, headlines = [], onBack, onRegenerate, aiModel, 
       }
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST", headers:{"Content-Type":"application/json","x-api-key":(localStorage.getItem("anthropic_api_key")||"").trim(),"anthropic-version":"2023-06-01","anthropic-dangerous-allow-browser":"true"},
+        method:"POST", headers:{"Content-Type":"application/json","x-api-key":(localStorage.getItem("anthropic_api_key")||"").trim(),"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body: JSON.stringify({
           model:"claude-sonnet-4-20250514", max_tokens:1000,
           system:`You rewrite financial carousel slide body text to fit a specific social media format. Be ${tone}. Max ${charLimit} chars per body. Keep all financial data points. Return ONLY raw JSON array: [{"slideLabel":"...","id":"e-body","content":"rewritten text"}]`,
@@ -5127,7 +5127,7 @@ function ContentPlanPanel({ headlines, selected, setSelected, contentPlans, setC
     try {
       const activeConsids = (promptConsids||[]).filter(p=>p.enabled).map(p=>p.text).join(". ");
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST", headers:{"Content-Type":"application/json","x-api-key":(localStorage.getItem("anthropic_api_key")||"").trim(),"anthropic-version":"2023-06-01","anthropic-dangerous-allow-browser":"true"},
+        method:"POST", headers:{"Content-Type":"application/json","x-api-key":(localStorage.getItem("anthropic_api_key")||"").trim(),"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body: JSON.stringify({
           model: selectedModel || "claude-sonnet-4-20250514",
           max_tokens: 600,
@@ -5634,7 +5634,7 @@ function AnalystBriefPanel({ headlines, selected, briefs, setBriefs, selectedMod
     try {
       const activeConsids = (promptConsids||[]).filter(p=>p.enabled).map(p=>p.text).join(". ");
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST", headers:{"Content-Type":"application/json","x-api-key":(localStorage.getItem("anthropic_api_key")||"").trim(),"anthropic-version":"2023-06-01","anthropic-dangerous-allow-browser":"true"},
+        method:"POST", headers:{"Content-Type":"application/json","x-api-key":(localStorage.getItem("anthropic_api_key")||"").trim(),"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body: JSON.stringify({
           model: selectedModel || "claude-sonnet-4-20250514",
           max_tokens: 400,
