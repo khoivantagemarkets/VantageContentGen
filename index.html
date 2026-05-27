@@ -1079,7 +1079,7 @@ function AiRewriteBlock({ el, updateEl, aiModel, aiConsids }) {
 
     try {
       const activeConsids = (aiConsids||[]).filter(p=>p.enabled).map((p,i)=>`${i+1}. ${p.text}`).join("\n");
-      const model = aiModel || "claude-sonnet-4-20250514";
+      const model = aiModel || "claude-sonnet-4-5";
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -3377,7 +3377,7 @@ function SlideEditor({ carousel, headlines = [], onBack, onRegenerate, aiModel, 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method:"POST", headers:{"Content-Type":"application/json","x-api-key":(localStorage.getItem("anthropic_api_key")||"").trim(),"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body: JSON.stringify({
-          model:"claude-sonnet-4-20250514", max_tokens:1000,
+          model:"claude-sonnet-4-5", max_tokens:1000,
           system:`You rewrite financial carousel slide body text to fit a specific social media format. Be ${tone}. Max ${charLimit} chars per body. Keep all financial data points. Return ONLY raw JSON array: [{"slideLabel":"...","id":"e-body","content":"rewritten text"}]`,
           messages:[{ role:"user", content:`Format: ${format.label} (${format.w}×${format.h}px, ${ft}). Rewrite these slide bodies:
 ${JSON.stringify(slideTexts)}
@@ -5129,7 +5129,7 @@ function ContentPlanPanel({ headlines, selected, setSelected, contentPlans, setC
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method:"POST", headers:{"Content-Type":"application/json","x-api-key":(localStorage.getItem("anthropic_api_key")||"").trim(),"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body: JSON.stringify({
-          model: selectedModel || "claude-sonnet-4-20250514",
+          model: selectedModel || "claude-sonnet-4-5",
           max_tokens: 600,
           system: `You are an editorial director at Vantage Markets Australia producing financial social media content.
 Content rules: ${activeConsids || "Factual, no trading advice, ASIC-safe"}.
@@ -5636,7 +5636,7 @@ function AnalystBriefPanel({ headlines, selected, briefs, setBriefs, selectedMod
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method:"POST", headers:{"Content-Type":"application/json","x-api-key":(localStorage.getItem("anthropic_api_key")||"").trim(),"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body: JSON.stringify({
-          model: selectedModel || "claude-sonnet-4-20250514",
+          model: selectedModel || "claude-sonnet-4-5",
           max_tokens: 400,
           system: `You are a financial market analyst at Vantage Markets Australia. Produce a brief analyst note on a headline. Content rules: ${activeConsids||"Factual, no trading advice, ASIC-safe language"}. Return ONLY valid JSON: {"relevance":"Which markets/assets are impacted (AUD, USD, equities, gold etc)","whyMatters":"Why traders should watch this — 1-2 sentences, factual","asicFraming":"ASIC-safe rephrasing of the headline (use 'markets may watch', 'could indicate', never 'traders should buy/sell')","copyAngle":"Best social media angle for Vantage audience"}`,
           messages:[{role:"user", content:`Headline: "${h.headline}"\nSource: ${h.source}\nSummary: ${h.summary||"N/A"}`}]
@@ -5879,7 +5879,7 @@ function VantageAutomation() {
 
   // ── AI Model + Prompt settings ──
   const AI_MODELS = [
-    { id:"claude-sonnet-4-20250514", label:"Claude Sonnet 4.5",  provider:"Anthropic", tag:"Recommended", desc:"Fast, smart, great for marketing copy" },
+    { id:"claude-sonnet-4-5", label:"Claude Sonnet 4.5",  provider:"Anthropic", tag:"Recommended", desc:"Fast, smart, great for marketing copy" },
     { id:"claude-opus-4-5-20251101", label:"Claude Opus 4.5",    provider:"Anthropic", tag:"Most capable", desc:"Slower, highest quality writing" },
     { id:"claude-haiku-4-5-20251001",label:"Claude Haiku 4.5",   provider:"Anthropic", tag:"Fastest",      desc:"Quick drafts, low token cost" },
   ];
@@ -6639,7 +6639,7 @@ CRITICAL RULES:
       // Use AI web-search — economic calendars are JS-rendered, RSS unavailable
       const sourcesStr = sources.map(s=>`${s.name} (${s.url})`).join(", ");
       const text = await callWithAgentLoop({
-        model:      "claude-sonnet-4-20250514",
+        model:      "claude-sonnet-4-5",
         max_tokens: 2500,
         tools:      [{ type:"web_search_20250305", name:"web_search" }],
         system: `You are a financial market analyst extracting economic calendar events for the upcoming week.
