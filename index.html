@@ -39,15 +39,15 @@ const DISCLAIMER =
   "Trading CFDs involves the risk of losing substantially more than the initial investment, and CFD investors do not own or have any rights to underlying assets. General advice only and does not constitute any investment advice. Please see our TMD, PDS and FSG on our website before trading. Vantage Global Prime Pty Ltd AFSL 428901.";
 
 const SOURCE_DEFS = [
-  { name:"Reuters",          rss:"https://feeds.reuters.com/reuters/topNews",                         hasRss:true  },
+  { name:"Reuters",          rss:"https://feeds.reuters.com/reuters/businessNews",                    hasRss:true  },
   { name:"FXStreet",         rss:"https://www.fxstreet.com/rss/news",                                 hasRss:true  },
-  { name:"DailyFX",          rss:"https://www.dailyfx.com/feeds/all",                                 hasRss:true  },
+  { name:"DailyFX",          rss:"https://www.dailyfx.com/feeds/market-news",                         hasRss:true  },
   { name:"Yahoo Finance",    rss:"https://finance.yahoo.com/news/rssindex",                           hasRss:true  },
   { name:"MarketWatch",      rss:"https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines", hasRss:true  },
   { name:"InvestingLive",    rss:"https://investinglive.com/feed/",                                   hasRss:true  },
   { name:"Ausbiz",           rss:"",  hasRss:false, url:"https://www.ausbiz.com.au",  site:"ausbiz.com.au" },
   { name:"CNBC Markets",     rss:"https://www.cnbc.com/id/20409666/device/rss/rss.html",              hasRss:true, url:"https://www.cnbc.com/markets/", site:"cnbc.com" },
-  { name:"Trading Economics",rss:"https://tradingeconomics.com/rss",                                   hasRss:true, url:"https://tradingeconomics.com", site:"tradingeconomics.com" },
+  { name:"ForexCrunch",      rss:"https://www.forexcrunch.com/feed/",                                 hasRss:true, url:"https://www.forexcrunch.com", site:"forexcrunch.com" },
 ];
 const SOURCES = SOURCE_DEFS.map(s => s.name);
 
@@ -2451,7 +2451,7 @@ function ExportModal({ slides, format, carousel, headlines, onClose }) {
     }
 
     if (exportFmt === "zip" || slides.length > 1) {
-      // Use JSZip if available
+      try { await loadJSZip(); } catch(_) {}
       if (window.JSZip) {
         const zip = new window.JSZip();
         links.forEach(l => { if(!l.url) return; const parts=l.url.split(","); const b64=parts[1]||""; if(b64) zip.file(l.name, b64, {base64:true}); });
@@ -2460,7 +2460,7 @@ function ExportModal({ slides, format, carousel, headlines, onClose }) {
         const a = document.createElement("a"); a.href=url; a.download="vantage-carousel.zip"; a.click();
         URL.revokeObjectURL(url);
       } else {
-        links.forEach(l => { const a=document.createElement("a"); a.href=l.url; a.download=l.name; a.click(); });
+        for (const l of links) { const a=document.createElement("a"); a.href=l.url; a.download=l.name; document.body.appendChild(a); a.click(); document.body.removeChild(a); await new Promise(r=>setTimeout(r,100)); }
       }
     } else {
       const l=links[0];
