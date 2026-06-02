@@ -2389,9 +2389,22 @@ function ExportModal({ slides, format, carousel, headlines, onClose }) {
             backgroundColor: null,
             logging: false,
             onclone: (clonedDoc) => {
-              // Strip @font-face rules — embedded base64 fonts stall html2canvas
-              clonedDoc.querySelectorAll("style").forEach(s => {
-                s.textContent = s.textContent.replace(/@font-face\s*\{[\s\S]*?\}/g, "");
+              // Replace base64 data-URI src in @font-face with local() references.
+              // This keeps the family/weight declaration so html2canvas registers the
+              // font name correctly, but avoids parsing the massive base64 strings
+              // that cause it to freeze. The browser canvas uses the already-loaded
+              // font from its cache when drawing text.
+              clonedDoc.querySelectorAll("style").forEach(styleEl => {
+                styleEl.textContent = styleEl.textContent.replace(
+                  /@font-face\s*\{([^}]+)\}/g,
+                  (_, body) => {
+                    const family = (body.match(/font-family\s*:\s*['"]?([^'";\n]+)['"]?/) || [])[1]?.trim() || "";
+                    const weight = (body.match(/font-weight\s*:\s*([^\n;]+)/) || [])[1]?.trim() || "400";
+                    const fStyle = (body.match(/font-style\s*:\s*([^\n;]+)/) || [])[1]?.trim() || "normal";
+                    if (!family) return "";
+                    return `@font-face { font-family: '${family}'; font-weight: ${weight}; font-style: ${fStyle}; src: local('${family}'); }`;
+                  }
+                );
               });
               // Remove editor-only overlays (selection, marquee, safe guides)
               clonedDoc.querySelectorAll("[data-export-ignore]").forEach(el => el.remove());
