@@ -2356,98 +2356,43 @@ function ExportModal({ slides, format, carousel, headlines, onClose }) {
   async function exportSlides() {
     setExporting(true); setExported([]);
     const links = [];
+    const origIdx = activeIdx;
 
-    for (let i = 0; i < slides.length; i++) {
-      const slide = slides[i];
-      // Build a simple SVG-based capture (no html2canvas dependency)
-      const w = format?.w || 1080;
-      const h = Math.round(w * (format?.ratio || 375/300));
-      const scale = exportScale;
-      const pw = w * scale, ph = h * scale;
-
-      // Create canvas manually
-      const canvas = document.createElement("canvas");
-      canvas.width = pw; canvas.height = ph;
-      const ctx = canvas.getContext("2d");
-
-      // Background
-      ctx.fillStyle = slide.bgImage ? "#000" : (slide.background || "#FFFFFF");
-      ctx.fillRect(0, 0, pw, ph);
-
-      // Background image
-      if (slide.bgImage) {
-        await new Promise(res => {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          img.onload = () => { ctx.drawImage(img, 0, 0, pw, ph); res(); };
-          img.onerror = res;
-          img.src = slide.bgImage;
+    try {
+      // Load html2canvas on demand
+      if (!window.html2canvas) {
+        await new Promise((res, rej) => {
+          const s = document.createElement("script");
+          s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+          s.onload = res;
+          s.onerror = () => rej(new Error("Failed to load html2canvas"));
+          document.head.appendChild(s);
         });
-        if (slide.bgGradient) {
-          // Gradient overlay
-          const grd = ctx.createLinearGradient(0, 0, 0, ph);
-          grd.addColorStop(0, "rgba(0,0,0,0)");
-          grd.addColorStop(1, "rgba(0,0,0,0.7)");
-          ctx.fillStyle = grd;
-          ctx.fillRect(0, 0, pw, ph);
-        }
       }
 
-      // Scale factor from slide coords (300px) to export pixels
-      const sx = pw / 300;
-      const sy = ph / (Math.round(300 * (format?.ratio||1.25)));
+      // Scale canvasRef (which is SLIDE_W*S CSS px wide) up to the export pixel width
+      const targetW = (format?.w || 1080) * exportScale;
+      const captureScale = targetW / CW;
 
-      // Draw each text element
-      for (const el of (slide.elements||[]).filter(e=>e.visible)) {
-        ctx.save();
-        const ex = el.x * sx, ey = el.y * sy;
-        const fs = (el.style?.fontSize||12) * sx;
+      for (let i = 0; i < slides.length; i++) {
+        setActiveIdx(i);
+        await new Promise(r => setTimeout(r, 200)); // wait for React to re-render the slide
 
-        if (el.type === "text" || el.type === "badge") {
-          const weight = el.style?.fontWeight >= 700 ? "bold" : "normal";
-          ctx.font = `${weight} ${fs}px 'Outfit', sans-serif`;
-          ctx.fillStyle = el.style?.color || "#000";
-          ctx.globalAlpha = el.style?.opacity ?? 1;
-          const lines = (el.content||"").split("\n");
-          const lh = fs * (el.style?.lineHeight || 1.4);
-          lines.forEach((line,li) => ctx.fillText(line, ex, ey + fs + li*lh));
-        } else if (el.type === "rect" || el.type === "arrow-btn") {
-          ctx.fillStyle = el.style?.background || B.orange;
-          ctx.globalAlpha = el.style?.opacity ?? 1;
-          const ew = (el.width==="auto"?50:Number(el.width))*sx;
-          const eh = (el.height==="auto"?26:Number(el.height))*sy;
-          const r  = Math.min((el.style?.borderRadius||0)*sx, ew/2, eh/2);
-          ctx.beginPath();
-          ctx.moveTo(ex+r, ey); ctx.lineTo(ex+ew-r, ey);
-          ctx.quadraticCurveTo(ex+ew, ey, ex+ew, ey+r);
-          ctx.lineTo(ex+ew, ey+eh-r);
-          ctx.quadraticCurveTo(ex+ew, ey+eh, ex+ew-r, ey+eh);
-          ctx.lineTo(ex+r, ey+eh); ctx.quadraticCurveTo(ex, ey+eh, ex, ey+eh-r);
-          ctx.lineTo(ex, ey+r); ctx.quadraticCurveTo(ex, ey, ex+r, ey);
-          ctx.closePath(); ctx.fill();
-          if (el.type==="arrow-btn") {
-            ctx.fillStyle="#fff"; ctx.font=`bold ${fs*1.1}px sans-serif`;
-            ctx.textAlign="center"; ctx.textBaseline="middle";
-            const ew2=(el.width==="auto"?26:Number(el.width))*sx;
-            const eh2=(el.height==="auto"?26:Number(el.height))*sy;
-            ctx.fillText("→", ex+ew2/2, ey+eh2/2);
-          }
-        } else if (el.type === "image") {
-          await new Promise(res => {
-            const img = new Image();
-            img.crossOrigin="anonymous";
-            img.onload=()=>{ const ew=(Number(el.width)||80)*sx, eh=(Number(el.height)||60)*sy; ctx.globalAlpha=el.style?.opacity??1; ctx.drawImage(img,ex,ey,ew,eh); res(); };
-            img.onerror=res; img.src=el.content;
-          });
-        }
-        ctx.restore();
+        const captured = await window.html2canvas(canvasRef.current, {
+          scale: captureScale,
+          useCORS: true,
+          allowTaint: false,
+          backgroundColor: null,
+          logging: false,
+        });
+
+        const mime = exportFmt === "jpg" ? "image/jpeg" : "image/png";
+        const dataUrl = captured.toDataURL(mime, 0.95);
+        const fname = exportFilename(i, slides[i].label);
+        links.push({ url: dataUrl, name: fname, slide: slides[i].label });
       }
-
-      // Export
-      const mime = exportFmt==="jpg" ? "image/jpeg" : "image/png";
-      const dataUrl = canvas.toDataURL(mime, 0.95);
-      const fname = exportFilename(i, slide.label);
-      links.push({ url:dataUrl, name:fname, slide:slide.label });
+    } finally {
+      setActiveIdx(origIdx);
     }
 
     if (exportFmt === "zip" || slides.length > 1) {
@@ -2463,8 +2408,8 @@ function ExportModal({ slides, format, carousel, headlines, onClose }) {
         for (const l of links) { const a=document.createElement("a"); a.href=l.url; a.download=l.name; document.body.appendChild(a); a.click(); document.body.removeChild(a); await new Promise(r=>setTimeout(r,100)); }
       }
     } else {
-      const l=links[0];
-      const a=document.createElement("a"); a.href=l.url; a.download=l.name; a.click();
+      const l = links[0];
+      const a = document.createElement("a"); a.href=l.url; a.download=l.name; a.click();
     }
     setExported(links);
     setExporting(false);
